@@ -62,14 +62,14 @@ def filter_promising_papers(papers, api_key):
 
         if evaluation["is_actionable_strategy"]:
             print(f"[PASS] {paper['title']}")
-            print(f"Reason: {evaluation["reason"]}\n")
+            print(f"Reason: {evaluation['reason']}\n")
             
             # Enrich the paper dictionary with the screener's reasoning
             paper["screener_reason"] = evaluation["reason"]
             filtered_papers.append(paper)
         else:
             print(f"[FAIL] {paper['title']}")
-            print(f"Reason: {evaluation["reason"]}\n")
+            print(f"Reason: {evaluation['reason']}\n")
             
     print(f"Screening complete. Retained {len(filtered_papers)} / {len(papers)} papers.")
     return filtered_papers
