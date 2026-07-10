@@ -16,3 +16,7 @@ typing-inspection>=0.4.2
 
 # PDF Processing
 PyMuPDF>=1.27.2.3
+
+# Environment and Storage
+python-dotenv>=1.0.0
+psycopg2-binary>=2.9.0

@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-import json
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
@@ -9,6 +8,7 @@ from api_retrieval import fetch_recent_quant_papers
 from llm_screener import filter_promising_papers
 from pdf_analyzer import download_and_extract_pdf, evaluate_strategy_with_gemini
 from email_sender import send_weekly_email
+from supabase_store import get_week_key, load_accumulated_papers, save_papers, clear_week
 
 load_dotenv()
 
@@ -92,42 +92,31 @@ def main():
 
     # Phase 4: Accumulation and Email Notification
     print("\n=== Phase 4: Data Accumulation & Delivery ===")
-    
-    # CRITICAL FOR CRON: Enforce absolute paths so the JSON file is always found
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    accumulation_file = os.path.join(script_dir, "accumulated_papers.json")
-    accumulated_papers = []
-    
-    # 1. Load any papers accumulated earlier in the week
-    if os.path.exists(accumulation_file):
-        try:
-            with open(accumulation_file, "r") as f:
-                accumulated_papers = json.load(f)
-        except json.JSONDecodeError:
-            print("Warning: Existing JSON accumulation file could not be read. Starting fresh.")
-            
-    # 2. Add today's findings
+
+    week_key = get_week_key()
+    accumulated_papers = load_accumulated_papers(week_key)
+
     if final_reports:
+        save_papers(final_reports, week_key)
         accumulated_papers.extend(final_reports)
-        
-        # Save the updated list back to the file
-        with open(accumulation_file, "w") as f:
-            json.dump(accumulated_papers, f, indent=4)
-            
+
     print(f"Saved {len(final_reports)} new papers today. Total accumulated this week: {len(accumulated_papers)}")
 
-    # 3. Check if today is the day to send the email (0 = Monday, 6 = Sunday)
+    # Check if today is the day to send the email (0 = Monday, 6 = Sunday)
     today_weekday = datetime.today().weekday()
     EMAIL_DAY = 6  # Sending on Sunday
-    
+
     if today_weekday == EMAIL_DAY:
         print("Today is Sunday! Triggering weekly email summary...")
         if accumulated_papers:
-            success = send_weekly_email(accumulated_papers)
+            success = send_weekly_email(
+                accumulated_papers,
+                os.environ.get("SENDER_EMAIL"),
+                os.environ.get("SENDER_PASSWORD"),
+                os.environ.get("RECEIVER_EMAIL"),
+            )
             if success:
-                # Clear the accumulation file for the new week
-                os.remove(accumulation_file)
-                print("Accumulation file cleared for the new week.")
+                clear_week(week_key)
         else:
             print("No papers were found this entire week. Skipping email.")
     else:
