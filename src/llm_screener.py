@@ -27,7 +27,7 @@ def screen_abstract_with_groq(title, abstract, api_key):
     
     # Construct the standard chat completion payload
     payload = client.chat.completions.create(
-        model="llama-3.1-8b-instant",  # Ultra-fast, highly capable model for screening
+        model="qwen/qwen3.8-27b",  # Capable model for screening
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_content}
