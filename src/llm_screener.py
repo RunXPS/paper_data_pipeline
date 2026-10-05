@@ -9,8 +9,10 @@ def screen_abstract_with_groq(title, abstract, api_key):
     a concrete, actionable trading strategy.
     """
 
+    # The SDK retries 408/429/5xx with exponential backoff; default is only 2 retries
     client = Groq(
         api_key=api_key,
+        max_retries=6,
     )
 
     # We use a strict system prompt to force a structured JSON output
@@ -26,17 +28,16 @@ def screen_abstract_with_groq(title, abstract, api_key):
     user_content = f"Title: {title}\nAbstract: {abstract}"
     
     # Construct the standard chat completion payload
-    payload = client.chat.completions.create(
-        model="qwen/qwen3.8-27b",  # Capable model for screening
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content}
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.0  # Zero temperature for deterministic classification
-    )
-    
     try:
+        payload = client.chat.completions.create(
+            model="qwen/qwen3.8-27b",  # Capable model for screening
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.0  # Zero temperature for deterministic classification
+        )
         result = payload.choices[0].message.content
         # Parse the inner JSON content returned by the model
         # classification = json.loads(result)
@@ -45,7 +46,7 @@ def screen_abstract_with_groq(title, abstract, api_key):
         
     except Exception as e:
         print(f"Error screening paper '{title}': {e}")
-        return {"is_actionable_strategy": False, "reason": "API classification failed."}
+        return json.dumps({"is_actionable_strategy": False, "reason": "API classification failed."})
 
 def filter_promising_papers(papers, api_key):
     """
